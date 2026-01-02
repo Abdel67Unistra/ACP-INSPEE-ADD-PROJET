@@ -1,1 +1,14 @@
+# Fichiers de données volumineux INSEE
+base_cc_comparateur.csv
+base_cc_comparateur_csv.zip
+meta_base_cc_comparateur.csv
 indice-de-defavorisation-sociale-fdep-par-iris.csv
+
+# Fichiers R temporaires
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj.user
+
+# macOS
+.DS_Store
