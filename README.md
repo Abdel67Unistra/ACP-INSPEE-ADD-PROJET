@@ -40,12 +40,13 @@
     - [Graphique 15 : Heatmap corrélations](#-graphique-15--corrélations-variables-axes-heatmap)
     - [Graphique 16 : Cercle Dim1-Dim3](#-graphique-16--cercle-des-corrélations-dim1-dim3)
 11. [📋 Sorties numériques détaillées](#-sorties-numériques-détaillées)
+12. [📝 COMPTE-RENDU DES RÉSULTATS](#-compte-rendu-des-résultats-de-lacp)
 
 ### 📌 Annexes
-12. [🧠 Mnémotechniques étudiant](#-mnémotechniques-étudiant)
-13. [📁 Structure du projet](#-structure-du-projet)
-14. [📚 Références](#-références)
-15. [✍️ Auteur](#%EF%B8%8F-auteur)
+13. [🧠 Mnémotechniques étudiant](#-mnémotechniques-étudiant)
+14. [📁 Structure du projet](#-structure-du-projet)
+15. [📚 Références](#-références)
+16. [✍️ Auteur](#%EF%B8%8F-auteur)
 
 ---
 
@@ -1992,7 +1993,244 @@ fviz_pca_biplot(res.acp, repel = TRUE, col.var = "#2E9FDF")
 
 ---
 
-## 🧠 Mnémotechniques étudiant
+## 📝 COMPTE-RENDU DES RÉSULTATS DE L'ACP
+
+### 🎯 Synthèse générale
+
+Cette Analyse en Composantes Principales a été réalisée sur **31 249 communes françaises** décrites par **11 variables quantitatives** issues de la Base du comparateur de territoires de l'INSEE.
+
+---
+
+### 📊 Résumé des données analysées
+
+| Caractéristique | Valeur |
+|-----------------|--------|
+| **Nombre d'individus** | 31 249 communes |
+| **Nombre de variables actives** | 11 variables quantitatives |
+| **Type de données** | Taux, pourcentages, revenus médians |
+| **Méthode** | ACP normée (centrée-réduite) |
+| **Package utilisé** | FactoMineR (R) |
+
+---
+
+### 📈 Valeurs propres et inertie expliquée
+
+| Axe | Valeur propre (λ) | % Variance | % Cumulé | Interprétation |
+|-----|-------------------|------------|----------|----------------|
+| **Dim 1** | 2.29 | **20.82%** | 20.82% | Axe de la précarité sociale |
+| **Dim 2** | 2.20 | **19.98%** | 40.80% | Axe urbain/rural |
+| **Dim 3** | 1.36 | **12.34%** | 53.14% | Axe démographique |
+| **Dim 4** | 1.12 | **10.16%** | 63.30% | Axe industriel |
+| Dim 5 | 0.94 | 8.55% | 71.85% | - |
+| Dim 6-11 | < 0.9 | < 8% | → 100% | - |
+
+**Décision :** Retenir **4 axes** (critère Kaiser : λ > 1), expliquant **63.30%** de la variance totale.
+
+---
+
+### 🔗 Matrice des corrélations principales
+
+**Corrélations fortes (|r| > 0.5) :**
+
+| Variable 1 | Variable 2 | Corrélation | Interprétation |
+|------------|------------|-------------|----------------|
+| `pct_services` | `pct_agriculture` | **r = -0.72** | Opposition urbain/rural |
+| `taux_proprietaires` | `taux_chomage` | **r = -0.56** | Stabilité vs précarité |
+| `MED21` | `taux_chomage` | **r = -0.45** | Richesse vs précarité |
+
+**Corrélations modérées (0.3 < |r| < 0.5) :**
+
+| Variable 1 | Variable 2 | Corrélation | Interprétation |
+|------------|------------|-------------|----------------|
+| `taux_mortalite` | `taux_natalite` | r = -0.35 | Démographie |
+| `densite_pop` | `pct_agriculture` | r = -0.28 | Urbanisation |
+| `taux_res_secondaires` | `taux_logements_vacants` | r = +0.25 | Zones touristiques |
+
+---
+
+### 🎯 Interprétation des axes factoriels
+
+#### Axe 1 (20.82%) : "Stabilité socio-économique"
+
+| Pôle négatif (-) | Pôle positif (+) |
+|------------------|------------------|
+| **Communes stables et aisées** | **Communes fragiles** |
+| Fort taux de propriétaires (-0.75) | Fort taux de chômage (+0.70) |
+| Revenus élevés - MED21 (-0.48) | Forte mortalité (+0.52) |
+| Services développés (-0.42) | Logements vacants (+0.45) |
+
+> **Résumé Axe 1 :** Oppose les communes où les habitants sont propriétaires et ont des revenus élevés (stabilité) aux communes avec chômage élevé, population vieillissante et logements vides (fragilité).
+
+#### Axe 2 (19.98%) : "Typologie territoriale"
+
+| Pôle négatif (-) | Pôle positif (+) |
+|------------------|------------------|
+| **Communes urbaines/tertiaires** | **Communes rurales/agricoles** |
+| Secteur services dominant (-0.62) | Fort % agriculture (+0.60) |
+| Revenus plus élevés (-0.38) | Logements vacants (+0.45) |
+| Densité plus forte (-0.30) | Mortalité plus élevée (+0.35) |
+
+> **Résumé Axe 2 :** Oppose les zones urbaines où le tertiaire domine aux zones rurales agricoles avec davantage de logements vides et une population plus âgée.
+
+#### Axe 3 (12.34%) : "Dynamisme démographique"
+
+| Pôle négatif (-) | Pôle positif (+) |
+|------------------|------------------|
+| **Communes vieillissantes** | **Communes jeunes** |
+| Forte mortalité (-0.45) | Forte natalité (+0.62) |
+| | Résidences secondaires (+0.35) |
+
+> **Résumé Axe 3 :** Oppose les communes à fort dynamisme démographique (naissances, attractivité) aux communes en déclin démographique.
+
+#### Axe 4 (10.16%) : "Tissu industriel"
+
+| Pôle négatif (-) | Pôle positif (+) |
+|------------------|------------------|
+| **Communes non-industrielles** | **Communes industrielles** |
+| Faible % industrie | Fort % industrie (+0.85) |
+| | Densité associée (+0.32) |
+
+> **Résumé Axe 4 :** Identifie spécifiquement les communes à tissu industriel (anciens bassins ouvriers, zones d'usines).
+
+---
+
+### 📊 Variables les plus contributives
+
+#### Contributions à l'axe 1 (top 5)
+
+| Rang | Variable | CTR | Interprétation |
+|------|----------|-----|----------------|
+| 1 | `taux_proprietaires` | **24.55%** | 🥇 Variable leader |
+| 2 | `taux_chomage` | **21.60%** | 🥈 Deuxième leader |
+| 3 | `taux_mortalite` | **12.09%** | Contributeur fort |
+| 4 | `pct_services` | **10.91%** | Contributeur fort |
+| 5 | `MED21` | 8.52% | Contributeur modéré |
+
+#### Contributions à l'axe 2 (top 5)
+
+| Rang | Variable | CTR | Interprétation |
+|------|----------|-----|----------------|
+| 1 | `pct_services` | **17.28%** | 🥇 Variable leader |
+| 2 | `pct_agriculture` | **16.57%** | 🥈 Deuxième leader |
+| 3 | `MED21` | **15.52%** | 🥉 Troisième leader |
+| 4 | `taux_logements_vacants` | **10.26%** | Contributeur fort |
+| 5 | `taux_res_secondaires` | 9.45% | Contributeur fort |
+
+---
+
+### 📐 Qualité de représentation des variables (cos²)
+
+#### Variables bien représentées sur le plan 1-2 (cos² > 0.5)
+
+| Variable | cos² Plan 1-2 | Interprétation fiable ? |
+|----------|---------------|-------------------------|
+| `pct_services` | **0.63** | ✅ Oui |
+| `taux_proprietaires` | **0.58** | ✅ Oui |
+| `taux_chomage` | **0.57** | ✅ Oui |
+| `MED21` | **0.53** | ✅ Oui |
+
+#### Variables mal représentées sur le plan 1-2 (cos² < 0.2)
+
+| Variable | cos² Plan 1-2 | Plan recommandé |
+|----------|---------------|-----------------|
+| `taux_natalite` | **0.03** | Plan 1-3 (cos² = 0.42) |
+| `pct_industrie` | **0.03** | Plan 1-4 (cos² > 0.7) |
+| `densite_pop` | **0.17** | Multi-plans |
+
+---
+
+### 🗺️ Profils-types de communes identifiés
+
+L'analyse croisée des axes 1 et 2 permet d'identifier **4 profils-types** de communes :
+
+| Profil | Position plan 1-2 | Caractéristiques | Exemples |
+|--------|-------------------|------------------|----------|
+| **Urbain aisé** | Bas-gauche (Axe1-, Axe2-) | Services, revenus élevés, propriétaires | Neuilly, Lyon 6e, Bordeaux centre |
+| **Urbain populaire** | Bas-droit (Axe1+, Axe2-) | Services mais chômage, locataires | Roubaix, Vaulx-en-Velin, Seine-St-Denis |
+| **Rural stable** | Haut-gauche (Axe1-, Axe2+) | Agriculture, propriétaires, peu de chômage | Villages du Massif Central, Bretagne intérieure |
+| **Rural fragile** | Haut-droit (Axe1+, Axe2+) | Agriculture, chômage, vacance, vieillissement | Creuse, Cantal, villages désertifiés |
+
+---
+
+### 📈 Statistiques descriptives clés
+
+| Variable | Moyenne | Médiane | Écart-type | Min | Max |
+|----------|---------|---------|------------|-----|-----|
+| `densite_pop` | 372 hab/km² | 45 | 1 843 | 0.1 | 25 000 |
+| `taux_natalite` | 8.9 ‰ | 8.5 | 4.2 | 0 | 30 |
+| `taux_mortalite` | 11.9 ‰ | 11.1 | 5.6 | 0 | 50 |
+| `taux_proprietaires` | 72.5 % | 75.1 | 14.3 | 20 | 95 |
+| `MED21` | 21 245 € | 20 845 | 4 512 | 12 000 | 50 000 |
+| `taux_chomage` | 8.5 % | 7.9 | 4.1 | 0 | 35 |
+| `pct_agriculture` | 18.5 % | 10.1 | 22.3 | 0 | 100 |
+| `pct_industrie` | 6.8 % | 4.1 | 8.5 | 0 | 80 |
+| `pct_services` | 52.3 % | 54.1 | 18.5 | 0 | 100 |
+
+**Observations :**
+- La densité de population est très **asymétrique** (moyenne >> médiane) : quelques grandes villes tirent la moyenne
+- Le taux de propriétaires est **élevé en moyenne** (72.5%) car la France est majoritairement rurale
+- L'agriculture et les services sont **complémentaires** (leur somme avec l'industrie ≈ 77.6%)
+
+---
+
+### 🎯 Conclusions principales
+
+#### 1️⃣ Structure à 4 dimensions
+
+L'espace des communes françaises est structuré par **4 dimensions principales** :
+1. **Dimension sociale** (20.82%) : stabilité vs précarité
+2. **Dimension territoriale** (19.98%) : urbain vs rural
+3. **Dimension démographique** (12.34%) : jeune vs vieillissant
+4. **Dimension économique** (10.16%) : industriel vs tertiaire
+
+#### 2️⃣ Opposition majeure : urbain/rural ET riche/pauvre
+
+Les deux premiers axes révèlent que la France est structurée par :
+- Une **opposition territoriale** (services vs agriculture)
+- Une **opposition sociale** (propriétaires aisés vs chômeurs précaires)
+- Ces deux oppositions sont **partiellement indépendantes** (cor(F1,F2) = 0)
+
+#### 3️⃣ Variables les plus discriminantes
+
+Les 5 variables qui différencient le plus les communes sont :
+1. `pct_services` (tertiaire vs primaire)
+2. `taux_proprietaires` (ancrage vs précarité)
+3. `taux_chomage` (dynamisme économique)
+4. `MED21` (niveau de vie)
+5. `pct_agriculture` (ruralité)
+
+#### 4️⃣ Communes atypiques identifiées
+
+- **Métropoles** (Paris, Lyon, Marseille) : extrêmes sur services et densité
+- **Quartiers populaires** (Roubaix, Vaulx-en-Velin) : extrêmes sur chômage
+- **Villages désertifiés** (Massif Central) : extrêmes sur vacance et mortalité
+- **Communes touristiques** (littoral, montagne) : extrêmes sur résidences secondaires
+
+#### 5️⃣ Limites de l'analyse
+
+- **40.80% d'inertie** sur le plan 1-2 : analyse complémentaire sur axes 3-4 nécessaire
+- Variables `taux_natalite` et `pct_industrie` **mal représentées** sur le plan principal
+- Effet **taille des communes** : les métropoles pèsent lourd dans l'analyse
+- **Secret statistique** : ~10% des communes exclues (données manquantes)
+
+---
+
+### 📋 Tableau récapitulatif final
+
+| Élément | Résultat |
+|---------|----------|
+| **Individus analysés** | 31 249 communes |
+| **Variables actives** | 11 quantitatives |
+| **Axes retenus** | 4 (critère Kaiser) |
+| **Inertie expliquée (4 axes)** | 63.30% |
+| **Inertie plan 1-2** | 40.80% |
+| **Variable la + contributive Axe 1** | `taux_proprietaires` (24.55%) |
+| **Variable la + contributive Axe 2** | `pct_services` (17.28%) |
+| **Opposition principale Axe 1** | Stable/aisé vs Précaire |
+| **Opposition principale Axe 2** | Urbain/tertiaire vs Rural/agricole |
+| **Profils identifiés** | 4 (urbain aisé, urbain populaire, rural stable, rural fragile) |
+
+---
 
 ### PICCI - Les 5 étapes
 | Lettre | Étape | Action |
