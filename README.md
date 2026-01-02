@@ -6,110 +6,288 @@
 
 ## 📖 Table des matières
 1. [Mise en situation](#mise-en-situation)
-2. [Les données INSEE](#les-données-insee)
-3. [Variables de l'analyse](#variables-de-lanalyse)
-4. [L'ACP en 5 étapes (PICCI)](#lacp-en-5-étapes-picci)
-5. [Fonctions R utilisées](#fonctions-r-utilisées)
-6. [Interprétation des résultats](#interprétation-des-résultats)
-7. [Mnémotechniques étudiant](#mnémotechniques-étudiant)
+2. [Source des données](#source-des-données)
+3. [Dictionnaire complet des variables](#dictionnaire-complet-des-variables)
+4. [Variables de l'analyse ACP](#variables-de-lanalyse-acp)
+5. [L'ACP en 5 étapes (PICCI)](#lacp-en-5-étapes-picci)
+6. [Fonctions R utilisées](#fonctions-r-utilisées)
+7. [Interprétation des résultats](#interprétation-des-résultats)
+8. [Mnémotechniques étudiant](#mnémotechniques-étudiant)
 
 ---
 
 ## 📍 Mise en situation
 
-### Contexte
-La **Base du comparateur de territoires** est une base de données produite par l'**INSEE** (Institut National de la Statistique et des Études Économiques) qui rassemble une trentaine d'indicateurs clés décrivant les **35 000+ communes françaises**.
+### Contexte général
+La France métropolitaine et d'outre-mer compte environ **35 000 communes**, des grandes métropoles comme Paris, Lyon ou Marseille aux petits villages ruraux de quelques dizaines d'habitants. Cette diversité territoriale se traduit par des **inégalités socio-économiques** importantes : certaines communes concentrent richesse, emplois et services, tandis que d'autres souffrent de désertification, vieillissement et précarité.
 
-### Pourquoi cette ACP ?
-En tant que statisticien, on vous demande d'analyser la **diversité des territoires français**. Chaque commune est caractérisée par de nombreuses variables : démographie, logement, revenus, emploi, activité économique...
+### Problématique de l'étude
+En tant qu'analyste statisticien, vous êtes mandaté pour répondre aux questions suivantes :
 
-**Questions posées :**
-- Quelles sont les grandes dimensions qui structurent les différences entre communes ?
-- Peut-on identifier des profils de territoires ? (urbain/rural, riche/pauvre, touristique...)
-- Quelles variables sont les plus discriminantes ?
+> **Comment caractériser et visualiser la diversité des territoires français ?**
 
-### Intérêt de l'ACP
-L'ACP permet de :
-1. **Réduire la dimensionnalité** : passer de 12 variables à 2-3 axes synthétiques
-2. **Visualiser** les relations entre communes
-3. **Identifier** les variables qui expliquent le plus les différences
-4. **Détecter** des groupes de communes similaires
+Plus précisément :
+- Quelles sont les **grandes dimensions** qui structurent les différences entre communes ?
+- Peut-on identifier des **profils-types** de territoires ? (urbain dense, rural agricole, touristique, industriel, précarisé...)
+- Quelles **variables** sont les plus discriminantes pour distinguer les territoires ?
+- Comment se positionnent les différents **départements** dans cette diversité ?
 
-### Source des données
-- **Producteur** : INSEE
-- **URL** : https://www.insee.fr/fr/statistiques/2521169
-- **Fichier** : `base_cc_comparateur.csv`
-- **Année de référence** : 2021-2023 (selon les variables)
-- **Unité statistique** : Commune (code CODGEO)
+### Pourquoi l'ACP est pertinente ici ?
+Avec **32 variables** décrivant chaque commune (démographie, logement, revenus, emploi, établissements...), il est impossible de visualiser directement les données. L'**Analyse en Composantes Principales** permet de :
+
+| Objectif | Comment l'ACP y répond |
+|----------|------------------------|
+| Réduire la complexité | Passer de 12+ variables à 2-3 axes synthétiques |
+| Visualiser les territoires | Projeter les 35 000 communes sur un plan 2D |
+| Identifier les variables clés | Cercle des corrélations |
+| Détecter des groupes | Clusters visuels sur le nuage d'individus |
+| Repérer les communes atypiques | Individus éloignés du centre |
+
+### Enjeux pratiques
+Cette analyse peut servir à :
+- **Aménagement du territoire** : identifier les zones à revitaliser
+- **Politiques sociales** : cibler les communes en difficulté
+- **Développement économique** : comprendre les dynamiques locales
+- **Études épidémiologiques** : contextualiser des données de santé
 
 ---
 
-## 📊 Les données INSEE
+## 🔗 Source des données
 
-### Description générale
-| Caractéristique | Valeur |
+### Informations générales
+
+| Caractéristique | Détail |
 |-----------------|--------|
-| Nombre d'observations | ~35 000 communes |
-| Nombre de variables brutes | 32 |
-| Séparateur CSV | Point-virgule (;) |
-| Valeurs manquantes | "s" (secret statistique), vides |
+| **Producteur** | INSEE (Institut National de la Statistique et des Études Économiques) |
+| **Nom de la base** | Base du comparateur de territoires |
+| **URL officielle** | https://www.insee.fr/fr/statistiques/2521169 |
+| **Date de parution** | 02/09/2025 (mise à jour régulière) |
+| **Géographie** | France métropolitaine + DOM-TOM |
+| **Niveau géographique** | Commune, arrondissement municipal |
+| **Format disponible** | CSV (3 Mo zippé), XLSX (10 Mo zippé) |
 
-### Variables brutes disponibles
-| Code | Description |
-|------|-------------|
-| CODGEO | Code commune |
-| P22_POP | Population 2022 |
-| SUPERF | Superficie (km²) |
-| NAIS1621 | Naissances 2016-2021 |
-| DECE1621 | Décès 2016-2021 |
-| P22_MEN | Ménages 2022 |
-| P22_LOG | Logements 2022 |
-| P22_RP | Résidences principales |
-| P22_RSECOCC | Résidences secondaires |
-| P22_LOGVAC | Logements vacants |
-| P22_RP_PROP | Résidences principales propriétaires |
-| MED21 | Médiane niveau de vie 2021 (€) |
-| TP6021 | Taux de pauvreté 2021 (%) |
-| P22_EMPLT | Emplois 2022 |
-| P22_CHOM1564 | Chômeurs 15-64 ans |
-| P22_ACT1564 | Actifs 15-64 ans |
-| ETTOT23 | Total établissements 2023 |
-| ETAZ23 | Établissements agriculture |
-| ETBE23 | Établissements industrie |
-| ETFZ23 | Établissements construction |
-| ETGU23 | Établissements commerce/services |
-| ETOQ23 | Établissements admin publique |
+### Téléchargement direct
+- **CSV** : https://www.insee.fr/fr/statistiques/fichier/2521169/base_cc_comparateur_csv.zip
+- **Excel** : https://www.insee.fr/fr/statistiques/fichier/2521169/base_cc_comparateur_xlsx.zip
+
+### Caractéristiques techniques du fichier
+
+| Propriété | Valeur |
+|-----------|--------|
+| **Nom du fichier** | `base_cc_comparateur.csv` |
+| **Taille** | ~8 Mo (décompressé) |
+| **Encodage** | UTF-8 |
+| **Séparateur** | Point-virgule (`;`) |
+| **Nombre de lignes** | ~35 000 communes |
+| **Nombre de colonnes** | 32 variables |
+| **Valeurs manquantes** | `s` (secret statistique), cellules vides |
+
+### Millésimes des sources
+Les données proviennent de plusieurs sources avec des années de référence différentes :
+
+| Source | Année | Variables concernées |
+|--------|-------|---------------------|
+| Recensement de la population | 2022 | Population, ménages, logements, emploi |
+| Recensement de la population | 2016 | Population historique |
+| État civil | 2016-2021 | Naissances, décès (cumul 6 ans) |
+| État civil | 2024 | Naissances, décès (année complète) |
+| Filosofi | 2021 | Revenus, pauvreté |
+| REE-Sirene | 2023 | Établissements économiques |
+
+### Précautions d'utilisation
+⚠️ **Secret statistique** : Certains indicateurs sont masqués (`s`) pour les petites communes afin de préserver la confidentialité des données individuelles.
+
+⚠️ **Géographie** : Les données sont diffusées en géographie 2024/2025, les fusions de communes récentes sont prises en compte.
 
 ---
 
-## 🔢 Variables de l'analyse
+## 📚 Dictionnaire complet des variables
 
-### Transformation des variables
-Pour l'ACP, on utilise des **ratios et taux** plutôt que des valeurs brutes car :
-- Les valeurs brutes dépendent de la **taille de la commune**
-- Paris a plus de logements que Plouescat juste par sa taille
-- Les ratios permettent de **comparer** des communes de tailles différentes
+### Vue d'ensemble des 32 variables brutes
+
+Le fichier contient **32 colonnes** organisées en 5 thématiques :
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    32 VARIABLES INSEE                           │
+├─────────────────────────────────────────────────────────────────┤
+│ 🏷️ IDENTIFICATION (1)   │ CODGEO                                │
+│ 👥 DÉMOGRAPHIE (6)      │ P22_POP, P16_POP, SUPERF,             │
+│                         │ NAIS1621, DECE1621, P22_MEN,          │
+│                         │ NAISD24, DECESD24                     │
+│ 🏠 LOGEMENT (5)         │ P22_LOG, P22_RP, P22_RSECOCC,         │
+│                         │ P22_LOGVAC, P22_RP_PROP               │
+│ 💰 REVENUS (4)          │ NBMENFISC21, PIMP21, MED21, TP6021    │
+│ 💼 EMPLOI (5)           │ P22_EMPLT, P22_EMPLT_SAL, P16_EMPLT,  │
+│                         │ P22_POP1564, P22_CHOM1564, P22_ACT1564│
+│ 🏭 ÉTABLISSEMENTS (8)   │ ETTOT23, ETAZ23, ETBE23, ETFZ23,      │
+│                         │ ETGU23, ETOQ23, ETTEF123, ETTEFP1023  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Tableau détaillé des variables
+
+#### 🏷️ 1. Identification géographique
+
+| N° | Code | Libellé complet | Type | Unité | Source |
+|----|------|-----------------|------|-------|--------|
+| 1 | `CODGEO` | Code du département suivi du numéro de commune ou d'arrondissement municipal | CHAR(5) | - | COG 2024 |
+
+> **Exemple** : `75056` = Paris, `13055` = Marseille, `69123` = Lyon
+
+#### 👥 2. Démographie et territoire
+
+| N° | Code | Libellé complet | Type | Unité | Source | Année |
+|----|------|-----------------|------|-------|--------|-------|
+| 2 | `P22_POP` | Population municipale | NUM | habitants | RP | 2022 |
+| 3 | `P16_POP` | Population municipale | NUM | habitants | RP | 2016 |
+| 4 | `SUPERF` | Superficie | NUM | km² | IGN | 2024 |
+| 5 | `NAIS1621` | Nombre de naissances domiciliées (cumul 2016-2021) | NUM | naissances | État civil | 2016-2021 |
+| 6 | `DECE1621` | Nombre de décès domiciliés (cumul 2016-2021) | NUM | décès | État civil | 2016-2021 |
+| 7 | `P22_MEN` | Nombre de ménages | NUM | ménages | RP | 2022 |
+| 8 | `NAISD24` | Nombre de naissances domiciliées | NUM | naissances | État civil | 2024 |
+| 9 | `DECESD24` | Nombre de décès domiciliés | NUM | décès | État civil | 2024 |
+
+> **Interprétation** :
+> - `P22_POP - P16_POP` = évolution démographique sur 6 ans
+> - `NAIS1621 - DECE1621` = solde naturel sur 6 ans
+> - Un ratio `NAIS/POP` élevé = commune jeune/dynamique
+
+#### 🏠 3. Logement
+
+| N° | Code | Libellé complet | Type | Unité | Source | Année |
+|----|------|-----------------|------|-------|--------|-------|
+| 10 | `P22_LOG` | Nombre de logements | NUM | logements | RP | 2022 |
+| 11 | `P22_RP` | Nombre de résidences principales | NUM | logements | RP | 2022 |
+| 12 | `P22_RSECOCC` | Nombre de résidences secondaires et logements occasionnels | NUM | logements | RP | 2022 |
+| 13 | `P22_LOGVAC` | Nombre de logements vacants | NUM | logements | RP | 2022 |
+| 14 | `P22_RP_PROP` | Nombre de résidences principales occupées par des propriétaires | NUM | logements | RP | 2022 |
+
+> **Vérification** : `P22_LOG = P22_RP + P22_RSECOCC + P22_LOGVAC`
+>
+> **Interprétation** :
+> - `P22_RSECOCC / P22_LOG` élevé = zone touristique (littoral, montagne)
+> - `P22_LOGVAC / P22_LOG` élevé = zone en déclin démographique
+> - `P22_RP_PROP / P22_RP` élevé = zone rurale, population stable
+
+#### 💰 4. Revenus et pauvreté
+
+| N° | Code | Libellé complet | Type | Unité | Source | Année |
+|----|------|-----------------|------|-------|--------|-------|
+| 15 | `NBMENFISC21` | Nombre de ménages fiscaux | NUM | ménages | Filosofi | 2021 |
+| 16 | `PIMP21` | Part des ménages fiscaux imposés | NUM | % | Filosofi | 2021 |
+| 17 | `MED21` | Médiane du niveau de vie | NUM | € / an | Filosofi | 2021 |
+| 18 | `TP6021` | Taux de pauvreté (seuil à 60%) | NUM | % | Filosofi | 2021 |
+
+> **Définitions** :
+> - **Niveau de vie** = revenu disponible du ménage / nombre d'UC (unités de consommation)
+> - **Médiane** = 50% des habitants ont un niveau de vie inférieur
+> - **Taux de pauvreté** = part de la population sous le seuil de pauvreté (60% du niveau de vie médian national ≈ 13 000 €/an)
+>
+> **Interprétation** :
+> - `MED21` élevé (> 25 000 €) = commune aisée
+> - `TP6021` > 20% = commune en difficulté sociale
+
+#### 💼 5. Emploi et activité
+
+| N° | Code | Libellé complet | Type | Unité | Source | Année |
+|----|------|-----------------|------|-------|--------|-------|
+| 19 | `P22_EMPLT` | Nombre d'emplois au lieu de travail | NUM | emplois | RP | 2022 |
+| 20 | `P22_EMPLT_SAL` | Nombre d'emplois salariés au lieu de travail | NUM | emplois | RP | 2022 |
+| 21 | `P16_EMPLT` | Nombre d'emplois au lieu de travail | NUM | emplois | RP | 2016 |
+| 22 | `P22_POP1564` | Population de 15 à 64 ans | NUM | habitants | RP | 2022 |
+| 23 | `P22_CHOM1564` | Chômeurs de 15 à 64 ans | NUM | personnes | RP | 2022 |
+| 24 | `P22_ACT1564` | Actifs de 15 à 64 ans | NUM | personnes | RP | 2022 |
+
+> **Formules utiles** :
+> - **Taux de chômage** = `P22_CHOM1564 / P22_ACT1564 × 100`
+> - **Taux d'activité** = `P22_ACT1564 / P22_POP1564 × 100`
+> - **Ratio emploi/population** = `P22_EMPLT / P22_POP1564 × 100`
+>
+> **Interprétation** :
+> - `P22_EMPLT / P22_POP` > 0.5 = pôle d'emploi (plus d'emplois que d'habitants actifs)
+> - `P22_EMPLT - P16_EMPLT` = création/destruction d'emplois sur 6 ans
+
+#### 🏭 6. Établissements économiques (REE-Sirene 2023)
+
+| N° | Code | Libellé complet | Type | Unité | Secteur NAF |
+|----|------|-----------------|------|-------|-------------|
+| 25 | `ETTOT23` | Nombre total d'établissements actifs | NUM | établ. | Tous |
+| 26 | `ETAZ23` | Nombre d'établissements actifs de l'agriculture, sylviculture et pêche | NUM | établ. | Section A |
+| 27 | `ETBE23` | Nombre d'établissements actifs de l'industrie | NUM | établ. | Sections B-E |
+| 28 | `ETFZ23` | Nombre d'établissements actifs de la construction | NUM | établ. | Section F |
+| 29 | `ETGU23` | Nombre d'établissements actifs du commerce, transports et services divers | NUM | établ. | Sections G-U (hors O-Q) |
+| 30 | `ETOQ23` | Nombre d'établissements actifs de l'administration publique, enseignement, santé et action sociale | NUM | établ. | Sections O-Q |
+| 31 | `ETTEF123` | Nombre d'établissements actifs de 1 à 9 salariés | NUM | établ. | Tous |
+| 32 | `ETTEFP1023` | Nombre d'établissements actifs de 10 salariés ou plus | NUM | établ. | Tous |
+
+> **Vérification** : `ETTOT23 = ETAZ23 + ETBE23 + ETFZ23 + ETGU23 + ETOQ23`
+>
+> **Nomenclature NAF (sections)** :
+> - **A** : Agriculture, sylviculture, pêche
+> - **B-E** : Industries extractives, manufacturières, énergie, eau
+> - **F** : Construction
+> - **G-U** : Commerce, transport, hébergement, information, finance, immobilier, services...
+> - **O** : Administration publique
+> - **P** : Enseignement
+> - **Q** : Santé humaine et action sociale
+>
+> **Interprétation** :
+> - `ETAZ23 / ETTOT23` élevé = commune rurale/agricole
+> - `ETGU23 / ETTOT23` élevé = commune tertiaire/urbaine
+> - `ETTEFP1023 / ETTOT23` élevé = présence de moyennes/grandes entreprises
+
+---
+
+## 🔢 Variables de l'analyse ACP
+
+### Pourquoi transformer les variables ?
+Les variables brutes (effectifs) dépendent de la **taille de la commune** :
+- Paris a 2 millions d'habitants, Rochefourchat (Drôme) en a 1
+- Comparer les valeurs brutes n'a pas de sens statistique
+
+**Solution** : Calculer des **ratios, taux et pourcentages** qui sont comparables quelle que soit la taille de la commune.
 
 ### 12 Variables quantitatives actives
 
-| N° | Variable | Formule | Interprétation |
-|----|----------|---------|----------------|
-| 1 | `densite_pop` | Population / Superficie | Concentration humaine |
-| 2 | `taux_natalite` | (Naissances/6) / Pop × 1000 | Dynamisme démographique |
-| 3 | `taux_mortalite` | (Décès/6) / Pop × 1000 | Vieillissement |
-| 4 | `taux_res_secondaires` | Rés. secondaires / Logements × 100 | Attractivité touristique |
-| 5 | `taux_logements_vacants` | Log. vacants / Logements × 100 | Désertification |
-| 6 | `taux_proprietaires` | Propriétaires / Rés. principales × 100 | Stabilité résidentielle |
-| 7 | `MED21` | Variable brute (€) | Niveau de vie médian |
-| 8 | `TP6021` | Variable brute (%) | Précarité économique |
-| 9 | `taux_chomage` | Chômeurs / Actifs × 100 | Dynamisme économique |
-| 10 | `pct_agriculture` | Établ. agri / Total × 100 | Ruralité |
-| 11 | `pct_industrie` | Établ. indus / Total × 100 | Tissu industriel |
-| 12 | `pct_services` | Établ. services / Total × 100 | Tertiarisation |
+Ces 12 variables dérivées sont utilisées pour l'ACP :
+
+| N° | Variable créée | Formule de calcul | Interprétation | Unité |
+|----|----------------|-------------------|----------------|-------|
+| 1 | `densite_pop` | `P22_POP / SUPERF` | Concentration spatiale de la population | hab/km² |
+| 2 | `taux_natalite` | `(NAIS1621 / 6) / P22_POP × 1000` | Dynamisme démographique, jeunesse | ‰ |
+| 3 | `taux_mortalite` | `(DECE1621 / 6) / P22_POP × 1000` | Vieillissement de la population | ‰ |
+| 4 | `taux_res_secondaires` | `P22_RSECOCC / P22_LOG × 100` | Attractivité touristique, littoral/montagne | % |
+| 5 | `taux_logements_vacants` | `P22_LOGVAC / P22_LOG × 100` | Désertification, déclin démographique | % |
+| 6 | `taux_proprietaires` | `P22_RP_PROP / P22_RP × 100` | Stabilité résidentielle, ruralité | % |
+| 7 | `MED21` | Variable brute INSEE | Niveau de vie médian | €/an |
+| 8 | `TP6021` | Variable brute INSEE | Précarité économique | % |
+| 9 | `taux_chomage` | `P22_CHOM1564 / P22_ACT1564 × 100` | Dynamisme économique (inverse) | % |
+| 10 | `pct_agriculture` | `ETAZ23 / ETTOT23 × 100` | Ruralité, activité primaire | % |
+| 11 | `pct_industrie` | `ETBE23 / ETTOT23 × 100` | Tissu industriel historique | % |
+| 12 | `pct_services` | `ETGU23 / ETTOT23 × 100` | Tertiarisation, urbanité | % |
 
 ### Variable qualitative illustrative
-- **Département** : extrait du code commune (2 premiers caractères)
-- Ne participe pas au calcul mais aide à l'interprétation
+
+| Variable | Définition | Rôle dans l'ACP |
+|----------|------------|-----------------|
+| `departement` | 2 premiers caractères de CODGEO | Ne participe pas au calcul, aide à l'interprétation |
+
+### Corrélations attendues entre variables
+
+```
+Variables corrélées positivement (→) :
+  • densite_pop ↔ pct_services (urbanisation)
+  • taux_natalite ↔ MED21 (communes aisées et jeunes)
+  • taux_mortalite ↔ pct_agriculture (communes rurales vieillissantes)
+  • taux_logements_vacants ↔ pct_agriculture (déclin rural)
+
+Variables corrélées négativement (↔) :
+  • densite_pop ↔ pct_agriculture (urbain vs rural)
+  • MED21 ↔ TP6021 (richesse vs pauvreté)
+  • taux_proprietaires ↔ densite_pop (rural vs urbain)
+  • pct_services ↔ pct_agriculture (tertiaire vs primaire)
+```
 
 ---
 
@@ -345,6 +523,6 @@ ACPCCM1/
 ---
 
 ## ✍️ Auteur
-Étudiant M1 Statistique - Université de Strasbourg
+Cheriet Abdelmalek M1 Statistique - Université de Strasbourg
 
 Date : Janvier 2025
