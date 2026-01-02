@@ -448,6 +448,513 @@ library(PCDimension)  # Bâton brisé
 
 ---
 
+## 📊 Sorties R détaillées et leur interprétation
+
+Cette section décrit en détail chaque sortie produite par le script R `ACP_INSEE_Communes.R`.
+
+### 1️⃣ Sortie : Structure des données
+
+```r
+cat("Nombre de communes:", nrow(insee), "\n")
+cat("Nombre de variables:", ncol(insee), "\n")
+```
+
+**Exemple de sortie :**
+```
+=== STRUCTURE DES DONNÉES ===
+Nombre de communes: 34935
+Nombre de variables: 32
+```
+
+**Interprétation :**
+- **34 935 communes** = individus statistiques (lignes)
+- **32 variables** = colonnes du fichier INSEE brut
+- Après nettoyage (NA, valeurs aberrantes), ce nombre peut diminuer
+
+---
+
+### 2️⃣ Sortie : Statistiques descriptives (`describe()`)
+
+```r
+print(describe(df_acp[, var_quanti]))
+```
+
+**Exemple de sortie :**
+```
+                        vars     n     mean       sd   median  trimmed    mad
+densite_pop                1 28456   372.41  1842.67    45.12   108.42  53.21
+taux_natalite              2 28456     8.92     4.21     8.45     8.71   3.18
+taux_mortalite             3 28456    11.87     5.64    11.12    11.45   4.82
+taux_res_secondaires       4 28456    12.45    18.72     4.21     8.12   5.94
+taux_logements_vacants     5 28456     8.34     6.89     6.78     7.45   4.12
+taux_proprietaires         6 28456    72.45    14.32    75.12    73.89  12.45
+MED21                      7 28456 21245.00  4512.00 20845.00 20912.00 3245.00
+TP6021                     8 28456    12.34     7.45    10.89    11.45   5.67
+taux_chomage               9 28456     8.45     4.12     7.89     8.12   3.45
+pct_agriculture           10 28456    18.45    22.34    10.12    14.23  12.34
+pct_industrie             11 28456     6.78     8.45     4.12     5.23   4.56
+pct_services              12 28456    52.34    18.45    54.12    53.45  16.78
+```
+
+**Comment lire ce tableau :**
+
+| Colonne | Signification | Utilité |
+|---------|---------------|---------|
+| `vars` | Numéro de la variable | Identification |
+| `n` | Nombre d'observations valides | Données manquantes = total - n |
+| `mean` | Moyenne arithmétique | Tendance centrale |
+| `sd` | Écart-type | Dispersion autour de la moyenne |
+| `median` | Médiane (50e percentile) | Robuste aux valeurs extrêmes |
+| `trimmed` | Moyenne tronquée (5%) | Moyenne sans les extrêmes |
+| `mad` | Écart absolu médian | Dispersion robuste |
+| `min/max` | Valeurs extrêmes | Détection d'anomalies |
+| `skew` | Asymétrie | >0 = queue à droite, <0 = queue à gauche |
+| `kurtosis` | Aplatissement | >0 = pointue, <0 = aplatie |
+
+**Points d'attention :**
+- `densite_pop` : moyenne >> médiane → distribution très asymétrique (quelques grandes villes)
+- `pct_agriculture` : forte variabilité (sd élevé) → grande hétérogénéité rurale
+- `MED21` : médiane ~21 000 € → niveau de vie médian des communes
+
+---
+
+### 3️⃣ Sortie : Matrice de corrélation
+
+```r
+mat.cor <- round(cor(df_acp[, var_quanti], use = "complete.obs"), 3)
+print(mat.cor)
+```
+
+**Exemple de sortie (extrait) :**
+```
+                       densite_pop taux_natalite taux_mortalite taux_res_sec
+densite_pop                  1.000         0.312         -0.245       -0.321
+taux_natalite                0.312         1.000         -0.456       -0.178
+taux_mortalite              -0.245        -0.456          1.000        0.234
+taux_res_secondaires        -0.321        -0.178          0.234        1.000
+MED21                        0.287         0.412         -0.312       -0.089
+TP6021                      -0.156        -0.289          0.178        0.045
+pct_agriculture             -0.567        -0.234          0.389        0.412
+pct_services                 0.534         0.198         -0.278       -0.312
+```
+
+**Comment interpréter :**
+
+| Valeur de r | Interprétation |
+|-------------|----------------|
+| r > 0.7 | Corrélation forte positive |
+| 0.4 < r < 0.7 | Corrélation modérée positive |
+| 0.2 < r < 0.4 | Corrélation faible positive |
+| -0.2 < r < 0.2 | Pas de corrélation linéaire |
+| -0.7 < r < -0.4 | Corrélation modérée négative |
+| r < -0.7 | Corrélation forte négative |
+
+**Corrélations clés à observer :**
+- `densite_pop` ↔ `pct_agriculture` = **-0.567** (opposition urbain/rural)
+- `MED21` ↔ `TP6021` = **négative** (richesse vs pauvreté)
+- `taux_natalite` ↔ `taux_mortalite` = **-0.456** (structure d'âge)
+
+---
+
+### 4️⃣ Sortie : Valeurs propres (`res.acp$eig`)
+
+```r
+print(res.acp$eig)
+```
+
+**Exemple de sortie :**
+```
+       eigenvalue percentage of variance cumulative percentage of variance
+comp 1   3.456789              28.806575                          28.80658
+comp 2   2.123456              17.695467                          46.50204
+comp 3   1.567890              13.065750                          59.56779
+comp 4   1.098765               9.156375                          68.72417
+comp 5   0.876543               7.304525                          76.02869
+comp 6   0.654321               5.452675                          81.48137
+...
+```
+
+**Comment lire ce tableau :**
+
+| Colonne | Signification | Exemple Dim1 |
+|---------|---------------|--------------|
+| `eigenvalue` | Valeur propre (λ) | 3.46 |
+| `percentage of variance` | % d'inertie expliquée | 28.8% |
+| `cumulative percentage` | % cumulé | 28.8% |
+
+**Règles de décision :**
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│ CRITÈRE DE KAISER : Garder les axes avec λ > 1                 │
+│ → Dans l'exemple : axes 1, 2, 3, 4 (4 axes)                    │
+├────────────────────────────────────────────────────────────────┤
+│ CRITÈRE DU COUDE : Là où l'éboulis "casse"                     │
+│ → Observation visuelle du scree plot                           │
+├────────────────────────────────────────────────────────────────┤
+│ CRITÈRE 80% : Garder assez d'axes pour 80% d'inertie          │
+│ → Dans l'exemple : 6 axes pour atteindre 81.5%                 │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Inertie totale :**
+- En ACP normée : inertie totale = nombre de variables = **12**
+- Somme des valeurs propres = 12
+
+---
+
+### 5️⃣ Sortie : Coordonnées des variables (`res.acp$var$coord`)
+
+```r
+print(round(res.acp$var$coord[, 1:5], 3))
+```
+
+**Exemple de sortie :**
+```
+                         Dim.1   Dim.2   Dim.3   Dim.4   Dim.5
+densite_pop              0.734  -0.312   0.145  -0.089   0.056
+taux_natalite            0.523   0.456  -0.234   0.178  -0.098
+taux_mortalite          -0.456  -0.234   0.567   0.123   0.234
+taux_res_secondaires    -0.389   0.678  -0.145   0.234  -0.123
+taux_logements_vacants  -0.312   0.123   0.456  -0.345   0.178
+taux_proprietaires      -0.567  -0.234   0.178   0.456  -0.089
+MED21                    0.612   0.345  -0.178  -0.123   0.234
+TP6021                  -0.456  -0.178   0.234   0.089  -0.156
+taux_chomage            -0.345  -0.234   0.123   0.178   0.345
+pct_agriculture         -0.789  -0.123   0.234   0.345  -0.178
+pct_industrie           -0.234   0.089   0.567  -0.234   0.123
+pct_services             0.812  -0.178  -0.234   0.089   0.145
+```
+
+**Comment interpréter :**
+- Ces coordonnées sont les **corrélations variable-axe** (en ACP normée)
+- |coord| proche de 1 = variable très liée à l'axe
+- Signe positif = même sens que l'axe
+- Signe négatif = sens opposé à l'axe
+
+**Lecture de l'exemple :**
+- **Axe 1** (28.8% d'inertie) :
+  - Variables positives : `pct_services` (0.81), `densite_pop` (0.73), `MED21` (0.61)
+  - Variables négatives : `pct_agriculture` (-0.79), `taux_proprietaires` (-0.57)
+  - → **Axe 1 = opposition URBAIN (droite) / RURAL (gauche)**
+
+- **Axe 2** (17.7% d'inertie) :
+  - Variables positives : `taux_res_secondaires` (0.68), `taux_natalite` (0.46)
+  - Variables négatives : `densite_pop` (-0.31)
+  - → **Axe 2 = dimension TOURISTIQUE / RÉSIDENTIEL**
+
+---
+
+### 6️⃣ Sortie : Contributions des variables (`res.acp$var$contrib`)
+
+```r
+print(round(res.acp$var$contrib[, 1:5], 2))
+```
+
+**Exemple de sortie :**
+```
+                         Dim.1  Dim.2  Dim.3  Dim.4  Dim.5
+densite_pop              15.58   4.59   1.34   0.72   0.36
+taux_natalite             7.91   9.79   3.49   2.89   1.10
+taux_mortalite            6.01   2.58  20.49   1.38   6.26
+taux_res_secondaires      4.37  21.64   1.34   4.99   1.73
+taux_logements_vacants    2.82   0.71  13.26  10.84   3.62
+taux_proprietaires        9.29   2.58   2.02  18.94   0.91
+MED21                    10.83   5.60   2.02   1.38   6.26
+TP6021                    6.01   1.49   3.49   0.72   2.78
+taux_chomage              3.44   2.58   0.96   2.89  13.61
+pct_agriculture          18.01   0.71   3.49  10.84   3.62
+pct_industrie             1.58   0.37  20.49   4.99   1.73
+pct_services             19.07   1.49   3.49   0.72   2.40
+```
+
+**Comment interpréter :**
+- **Contribution = % de l'inertie de l'axe dû à cette variable**
+- Somme des contributions d'un axe = 100%
+- **Seuil théorique** = 100/12 = **8.33%**
+- CTR > 8.33% → contribution significative
+
+**Lecture de l'exemple (Axe 1) :**
+```
+Variables qui "fabriquent" l'axe 1 :
+  ✓ pct_services      : 19.07% (> 8.33%) → FORT
+  ✓ pct_agriculture   : 18.01% (> 8.33%) → FORT
+  ✓ densite_pop       : 15.58% (> 8.33%) → FORT
+  ✓ MED21             : 10.83% (> 8.33%) → MODÉRÉ
+  ✓ taux_proprietaires:  9.29% (> 8.33%) → MODÉRÉ
+  ✗ taux_chomage      :  3.44% (< 8.33%) → FAIBLE
+```
+
+---
+
+### 7️⃣ Sortie : Qualité de représentation (`res.acp$var$cos2`)
+
+```r
+print(round(res.acp$var$cos2[, 1:5], 3))
+```
+
+**Exemple de sortie :**
+```
+                         Dim.1  Dim.2  Dim.3  Dim.4  Dim.5
+densite_pop              0.539  0.097  0.021  0.008  0.003
+taux_natalite            0.274  0.208  0.055  0.032  0.010
+taux_mortalite           0.208  0.055  0.321  0.015  0.055
+taux_res_secondaires     0.151  0.460  0.021  0.055  0.015
+...
+```
+
+**Comment interpréter :**
+- **cos² = (coordonnée)²**
+- cos² = qualité de représentation sur cet axe
+- **Somme cos² sur tous les axes = 1** (pour chaque variable)
+- cos² > 0.5 sur un axe → variable bien représentée par cet axe
+
+**Qualité sur le plan 1-2 :**
+```r
+cos2_plan12 <- res.acp$var$cos2[, 1] + res.acp$var$cos2[, 2]
+```
+
+| Variable | cos² Plan 1-2 | Interprétation |
+|----------|---------------|----------------|
+| > 0.7 | Très bien représentée ✅ |
+| 0.5 - 0.7 | Bien représentée |
+| 0.3 - 0.5 | Moyennement représentée |
+| < 0.3 | Mal représentée ⚠️ → regarder autres plans |
+
+---
+
+### 8️⃣ Sortie : Description des axes (`dimdesc()`)
+
+```r
+desc <- dimdesc(res.acp, axes = 1:3)
+print(desc$Dim.1)
+```
+
+**Exemple de sortie :**
+```
+$quanti
+                      correlation      p.value
+pct_services             0.812345 1.234567e-89
+densite_pop              0.734567 2.345678e-78
+MED21                    0.612345 3.456789e-56
+taux_natalite            0.523456 4.567890e-45
+pct_agriculture         -0.789012 5.678901e-84
+taux_proprietaires      -0.567890 6.789012e-52
+taux_mortalite          -0.456789 7.890123e-34
+TP6021                  -0.456123 8.901234e-33
+```
+
+**Comment interpréter :**
+- Variables triées par corrélation avec l'axe
+- **Positives en haut** = même sens que l'axe
+- **Négatives en bas** = sens opposé
+- p-value < 0.05 = corrélation significative
+
+**Synthèse Axe 1 :**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    INTERPRÉTATION AXE 1                         │
+├─────────────────────────────────────────────────────────────────┤
+│ CÔTÉ POSITIF (+)        │ CÔTÉ NÉGATIF (-)                      │
+│ • Services élevés       │ • Agriculture élevée                  │
+│ • Forte densité         │ • Fort taux propriétaires             │
+│ • Revenus élevés        │ • Mortalité élevée                    │
+│ • Natalité élevée       │ • Pauvreté élevée                     │
+├─────────────────────────────────────────────────────────────────┤
+│ → COMMUNES URBAINES     │ → COMMUNES RURALES                    │
+│   AISÉES               │    VIEILLISSANTES                     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 9️⃣ Sortie : Coordonnées des individus (`res.acp$ind$coord`)
+
+```r
+head(res.acp$ind$coord[, 1:3], 10)
+```
+
+**Exemple de sortie :**
+```
+           Dim.1    Dim.2    Dim.3
+01001     -2.345    0.456   -0.123
+01002     -1.234    0.789   -0.234
+01004     -0.567    1.234    0.456
+...
+75056     12.345   -2.345    1.234   # Paris
+13055      8.456   -1.567    0.789   # Marseille
+69123      7.234   -0.987    0.567   # Lyon
+```
+
+**Comment interpréter :**
+- Chaque ligne = une commune
+- Coordonnées = position sur les axes factoriels
+- Valeurs extrêmes = communes atypiques
+
+**Exemples d'interprétation :**
+- `75056` (Paris) : Dim1 = +12.34 → très urbain, tertiaire
+- `01001` : Dim1 = -2.34 → plutôt rural
+
+---
+
+### 🔟 Sortie : Top contributeurs (`res.acp$ind$contrib`)
+
+```r
+top_contrib_1 <- head(sort(res.acp$ind$contrib[, 1], decreasing = TRUE), 20)
+print(round(top_contrib_1, 3))
+```
+
+**Exemple de sortie :**
+```
+    75056     13055     69123     31555     33063 
+    2.456     1.234     0.987     0.876     0.765 
+    59350     06088     44109     67482     34172 
+    0.654     0.543     0.432     0.321     0.298
+```
+
+**Comment interpréter :**
+- **Contribution individuelle** = part de l'inertie de l'axe due à cette commune
+- Les grandes villes contribuent fortement (effet de levier)
+- Seuil théorique = 100/n ≈ 100/28000 ≈ **0.0036%**
+- CTR > 0.5% → commune très influente sur l'axe
+
+**Communes les plus influentes (Axe 1) :**
+| Code | Commune | CTR Dim1 | Interprétation |
+|------|---------|----------|----------------|
+| 75056 | Paris | 2.46% | Métropole ultra-urbaine |
+| 13055 | Marseille | 1.23% | Grande métropole |
+| 69123 | Lyon | 0.99% | Grande métropole |
+
+---
+
+### 📊 Graphiques produits et leur lecture
+
+#### Graphique 1 : Matrice de corrélation (`corrplot`)
+
+**Code R :**
+```r
+X11()
+corrplot(mat.cor, method = "color", type = "lower", ...)
+```
+
+**Description :**
+- Matrice triangulaire inférieure
+- Couleurs : bleu = corrélation positive, rouge = négative
+- Intensité = force de la corrélation
+
+**Ce qu'il faut observer :**
+- Blocs de variables corrélées (structures)
+- Variables isolées (spécifiques)
+- Corrélations fortes négatives (oppositions)
+
+---
+
+#### Graphique 2 : Éboulis des valeurs propres (`fviz_eig`)
+
+**Code R :**
+```r
+X11()
+fviz_eig(res.acp, addlabels = TRUE, ylim = c(0, 35))
+```
+
+**Description :**
+- Barres : % d'inertie par axe
+- Courbe : % cumulé (optionnel)
+- Ligne rouge (Kaiser) : seuil λ = 1
+
+**Ce qu'il faut observer :**
+- Position du "coude" (cassure de la pente)
+- Nombre de barres au-dessus de 100/p
+- Combien d'axes pour ~80% d'inertie
+
+---
+
+#### Graphique 3 : Cercle des corrélations (`fviz_pca_var`)
+
+**Code R :**
+```r
+X11()
+fviz_pca_var(res.acp, col.var = "contrib", repel = TRUE)
+```
+
+**Description :**
+- Cercle de rayon 1
+- Flèches = variables
+- Longueur = qualité de représentation
+- Couleur = contribution (gradient)
+
+**Règles de lecture :**
+```
+┌────────────────────────────────────────────────────────────────┐
+│ LECTURE DU CERCLE DES CORRÉLATIONS                             │
+├────────────────────────────────────────────────────────────────┤
+│ • Variable PROCHE du cercle → bien représentée                 │
+│ • Variables PROCHES entre elles → corrélées positivement       │
+│ • Variables OPPOSÉES → corrélées négativement                  │
+│ • Variables à 90° → non corrélées                              │
+│ • Variable COURTE → mal représentée (regarder autre plan)      │
+└────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### Graphique 4 : Contributions des variables (`fviz_contrib`)
+
+**Code R :**
+```r
+X11()
+fviz_contrib(res.acp, choice = "var", axes = 1)
+```
+
+**Description :**
+- Barres horizontales
+- Ligne rouge pointillée = seuil 100/p
+- Barres au-dessus = contribuent significativement
+
+**Ce qu'il faut observer :**
+- Quelles variables dépassent le seuil
+- Équilibre ou dominance de certaines variables
+
+---
+
+#### Graphique 5 : Nuage des individus (`fviz_pca_ind`)
+
+**Code R :**
+```r
+X11()
+fviz_pca_ind(res.acp, col.ind = "cos2", pointsize = 1)
+```
+
+**Description :**
+- Chaque point = une commune
+- Position = coordonnées factorielles
+- Couleur = qualité de représentation (cos²)
+
+**Ce qu'il faut observer :**
+- Forme du nuage (allongé, rond, groupes)
+- Points extrêmes (atypiques)
+- Concentration vs dispersion
+
+---
+
+#### Graphique 6 : Biplot (`fviz_pca_biplot`)
+
+**Code R :**
+```r
+X11()
+fviz_pca_biplot(res.acp, repel = TRUE, col.var = "#2E9FDF")
+```
+
+**Description :**
+- Superposition individus + variables
+- Permet de voir quelles communes correspondent à quelles caractéristiques
+
+**Ce qu'il faut observer :**
+- Communes proches de certaines variables
+- Interprétation conjointe individus/variables
+
+---
+
 ## 🧠 Mnémotechniques étudiant
 
 ### PICCI - Les 5 étapes
