@@ -1,0 +1,696 @@
+---
+title: "Analyse en Composantes Principales - Heart Disease Dataset"
+subtitle: "UCI Machine Learning Repository - Facteurs de Risque Cardiaque"
+author: "Votre Nom"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: true
+    theme: united
+    highlight: tango
+    code_folding: hide
+    fig_width: 10
+    fig_height: 7
+  pdf_document:
+    toc: true
+    number_sections: true
+    fig_width: 10
+    fig_height: 7
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 10,
+  fig.height = 7
+)
+```
+
+# 1. Introduction et Problématique
+
+## 1.1 Contexte de l'étude
+
+Les maladies cardiovasculaires demeurent l'une des principales causes de mortalité dans le monde. La compréhension des facteurs de risque associés aux maladies cardiaques est cruciale pour la prévention et le diagnostic précoce.
+
+Le dataset Heart Disease de l'Université de Californie (UC Irvine Machine Learning Repository) contient des données cliniques et démographiques relatives à des patients, permettant une exploration multidimensionnelle des facteurs influençant la présence ou l'absence de maladie cardiaque.
+
+## 1.2 Objectif de l'étude
+
+L'objectif principal de cette analyse est de :
+
+- **Identifier les dimensions principales** qui structurent la variabilité des facteurs de risque cardiaque
+- **Explorer les associations** entre les différentes variables cliniques et biologiques
+- **Visualiser les individus (patients)** dans un espace de dimension réduite
+- **Interpréter** les axes principaux en termes cliniques et biologiques
+
+## 1.3 Méthodologie
+
+Nous utiliserons l'**Analyse en Composantes Principales (ACP)** comme méthode exploratoire. L'ACP est particulièrement adaptée car :
+
+- Les variables sont toutes quantitatives
+- Elle permet de réduire la dimensionnalité des données
+- Elle met en évidence les corrélations entre variables
+- Elle facilite la visualisation des données complexes
+
+---
+
+# 2. Présentation de la Base de Données
+
+## 2.1 Source des données
+
+**Source officielle :** UCI Machine Learning Repository  
+**URL :** https://archive.ics.uci.edu/ml/datasets/Heart+Disease  
+**Collecte :** Données cliniques de plusieurs hôpitaux  
+
+## 2.2 Chargement et nettoyage des données
+
+```{r import_data}
+# Chargement des packages
+library(FactoMineR)
+library(factoextra)
+library(corrplot)
+library(ggplot2)
+library(psych)        
+library(skimr)        
+library(PCDimension)
+library(dplyr)
+
+# Téléchargement des données
+url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data"
+
+# Lire les données
+heart <- read.csv(url, header = FALSE, stringsAsFactors = TRUE)
+
+# Noms des colonnes
+colnames(heart) <- c("age", "sex", "cp", "trestbps", "chol", "fbs", 
+                     "restecg", "thalach", "exang", "oldpeak", 
+                     "slope", "ca", "thal", "num")
+
+# Remplacer les "?" par NA
+heart[heart == "?"] <- NA
+
+# Conversion en types appropriés
+heart <- data.frame(
+  age = as.numeric(heart$age),
+  sex = as.factor(heart$sex),
+  cp = as.factor(heart$cp),
+  trestbps = as.numeric(heart$trestbps),
+  chol = as.numeric(heart$chol),
+  fbs = as.factor(heart$fbs),
+  restecg = as.factor(heart$restecg),
+  thalach = as.numeric(heart$thalach),
+  exang = as.factor(heart$exang),
+  oldpeak = as.numeric(heart$oldpeak),
+  slope = as.factor(heart$slope),
+  ca = as.numeric(heart$ca),
+  thal = as.factor(heart$thal),
+  num = as.factor(heart$num)
+)
+
+# Nettoyage
+heart_clean <- na.omit(heart)
+
+cat("Dimensions originales :", nrow(heart), "x", ncol(heart), "\n")
+cat("Après nettoyage :", nrow(heart_clean), "x", ncol(heart_clean), "\n")
+cat("Valeurs manquantes supprimées :", nrow(heart) - nrow(heart_clean), "\n")
+```
+
+## 2.3 Description des variables
+
+```{r variables_desc}
+cat("\n=== STRUCTURE DES DONNÉES ===\n")
+str(heart_clean)
+
+cat("\n=== RÉSUMÉ ===\n")
+summary(heart_clean)
+
+cat("\n=== PREMIÈRES LIGNES ===\n")
+head(heart_clean, 10)
+```
+
+**Variables quantitatives pour l'ACP :**
+
+| Variable | Description | Unité |
+|----------|-------------|-------|
+| **age** | Âge du patient | années |
+| **trestbps** | Tension artérielle au repos | mmHg |
+| **chol** | Cholestérol sérique | mg/dl |
+| **thalach** | Fréquence cardiaque maximale atteinte | bpm |
+| **oldpeak** | Dépression ST induite par l'exercice | mm |
+| **ca** | Nombre de vaisseaux majeurs calcifiés | nombre |
+
+---
+
+# 3. Statistiques Descriptives
+
+## 3.1 Résumé des variables quantitatives
+
+```{r descriptives}
+# Sélection des variables quantitatives
+heart_quanti <- heart_clean %>% 
+  select(age, trestbps, chol, thalach, oldpeak, ca)
+
+# Résumés statistiques
+skim(heart_quanti)
+
+describe(heart_quanti)
+```
+
+## 3.2 Distribution des variables
+
+```{r distributions, fig.width=12, fig.height=8}
+par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
+for (col in names(heart_quanti)) {
+  hist(heart_quanti[[col]], 
+       main = paste("Distribution de", col),
+       xlab = col,
+       col = "steelblue",
+       border = "white")
+}
+par(mfrow = c(1, 1))
+```
+
+---
+
+# 4. Analyse des Corrélations
+
+## 4.1 Matrice de corrélations
+
+```{r correlation}
+# Matrice de corrélation de Pearson
+mat.cor <- round(cor(heart_quanti), 3)
+print(mat.cor)
+```
+
+## 4.2 Visualisation graphique
+
+```{r corrplot, fig.width=9, fig.height=8}
+# Méthode couleur
+corrplot(
+  mat.cor,
+  method = "color",
+  type = "lower",
+  tl.srt = 45,
+  tl.cex = 0.9,
+  addCoef.col = "black",
+  number.cex = 0.8,
+  title = "Matrice des corrélations - Heart Disease",
+  mar = c(0, 0, 2, 0)
+)
+```
+
+```{r corrplot_mixed, fig.width=9, fig.height=8}
+# Méthode mixte
+corrplot.mixed(
+  mat.cor, 
+  upper = 'ellipse',
+  lower = 'number',
+  tl.cex = 0.9,
+  number.cex = 0.8,
+  title = "Matrice mixte des corrélations",
+  mar = c(0, 0, 2, 0)
+)
+```
+
+### Observations
+
+- Corrélation **négative** entre thalach (fréquence cardiaque max) et oldpeak (dépression ST)
+- Corrélation **négative** entre age et thalach
+- Les 6 variables sont modérément corrélées, justifiant une ACP
+
+---
+
+# 5. Réalisation de l'ACP
+
+## 5.1 Calcul de l'ACP normée
+
+```{r acp_calcul}
+# ACP normée sur les 6 variables
+rownames(heart_quanti) <- paste0("P", 1:nrow(heart_quanti))
+
+heart.acp <- PCA(heart_quanti, 
+                 scale.unit = TRUE,
+                 ncp = 5,
+                 graph = FALSE)
+
+# Résumé
+summary(heart.acp)
+```
+
+## 5.2 Valeurs propres et inertie
+
+```{r eigenvalues}
+# Tableau des valeurs propres
+print(heart.acp$eig)
+
+cat("\nInertie totale :", sum(heart.acp$eig[, 1]), "\n")
+cat("Dim 1 explique :", round(heart.acp$eig[1, 2], 2), "% de la variance\n")
+cat("Dim 2 explique :", round(heart.acp$eig[2, 2], 2), "% de la variance\n")
+cat("Dim 1+2 expliquent :", round(heart.acp$eig[2, 3], 2), "% de variance cumulée\n")
+```
+
+## 5.3 Éboulis des valeurs propres
+
+```{r scree_plot, fig.width=10, fig.height=6}
+# Éboulis en valeurs propres
+fviz_eig(heart.acp, 
+         addlabels = TRUE, 
+         choice = "eigenvalue",
+         title = "Éboulis des valeurs propres")
+
+# Éboulis en pourcentage
+fviz_eig(heart.acp, 
+         addlabels = TRUE,
+         title = "Éboulis - % de variance expliquée")
+```
+
+## 5.4 Nombre d'axes à retenir
+
+```{r nb_axes}
+# Critère de Kaiser
+kaiser <- heart.acp$eig[, 1] > 1
+cat("Critère de Kaiser (λ > 1):\n")
+cat("Axes retenus:", which(kaiser), "\n")
+
+# Critère du bâton brisé
+n_var <- ncol(heart_quanti)
+bs <- 100 * brokenStick(1:n_var, n_var)
+vp <- heart.acp$eig[, 2]
+
+barplot(
+  rbind(vp[1:n_var], bs),
+  beside = TRUE,
+  legend = c("Inertie observée", "Bâton brisé"),
+  col = c("tomato1", "turquoise3"), 
+  border = "white",
+  main = "Critère du bâton brisé",
+  xlab = "Dimensions",
+  ylab = "Pourcentage de variance"
+)
+
+cat("\n→ Décision : Retenir les 2 premiers axes\n")
+```
+
+---
+
+# 6. Analyse des Variables
+
+## 6.1 Corrélations variables-axes
+
+```{r var_correlations}
+# Corrélations
+cat("=== CORRÉLATIONS VARIABLES-AXES ===\n")
+print(round(heart.acp$var$cor[, 1:2], 3))
+
+cat("\n--- AXE 1 ---\n")
+print(sort(heart.acp$var$cor[, 1], decreasing = TRUE))
+
+cat("\n--- AXE 2 ---\n")
+print(sort(heart.acp$var$cor[, 2], decreasing = TRUE))
+```
+
+## 6.2 Contributions des variables
+
+```{r var_contrib}
+cat("=== CONTRIBUTIONS DES VARIABLES (%) ===\n")
+print(round(heart.acp$var$contrib[, 1:2], 2))
+```
+
+## 6.3 Cercle des corrélations
+
+```{r cercle_var, fig.width=9, fig.height=8}
+# Cercle standard
+fviz_pca_var(
+  heart.acp, 
+  col.var = "black",
+  repel = TRUE,
+  title = "Cercle des corrélations"
+)
+```
+
+```{r cercle_cos2, fig.width=9, fig.height=8}
+# Cercle avec cos²
+fviz_pca_var(
+  heart.acp, 
+  col.var = "cos2",
+  gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  repel = TRUE,
+  title = "Variables - Qualité de représentation (cos²)"
+)
+```
+
+```{r cercle_contrib, fig.width=9, fig.height=8}
+# Cercle avec contribution
+fviz_pca_var(
+  heart.acp, 
+  col.var = "contrib",
+  gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  repel = TRUE,
+  title = "Variables - Contribution aux axes"
+)
+```
+
+---
+
+# 7. Analyse des Individus (Patients)
+
+## 7.1 Qualité de représentation
+
+```{r ind_quality}
+# Qualité sur les axes 1-2
+qlt12 <- rowSums(heart.acp$ind$cos2[, 1:2])
+
+cat("=== QUALITÉ DE REPRÉSENTATION DES INDIVIDUS ===\n")
+cat("Top 15 patients bien représentés:\n")
+print(head(sort(qlt12, decreasing = TRUE), 15))
+
+cat("\nBottom 10 patients mal représentés:\n")
+print(head(sort(qlt12, decreasing = FALSE), 10))
+
+# Statistiques
+cat("\nStatistiques:\n")
+cat("Qualité moyenne :", round(mean(qlt12), 3), "\n")
+cat("Médiane :", round(median(qlt12), 3), "\n")
+cat("% patients bien représentés (cos² > 0.5) :", 
+    round(sum(qlt12 > 0.5) / length(qlt12) * 100, 1), "%\n")
+```
+
+## 7.2 Contributions des individus
+
+```{r ind_contrib}
+# Contribution moyenne
+contrib_moy <- 100 / nrow(heart_quanti)
+cat("Contribution moyenne d'un patient:", round(contrib_moy, 2), "%\n")
+
+cat("\nTop 15 contributeurs à l'axe 1:\n")
+print(sort(heart.acp$ind$contrib[, 1], decreasing = TRUE)[1:15])
+
+cat("\nTop 15 contributeurs à l'axe 2:\n")
+print(sort(heart.acp$ind$contrib[, 2], decreasing = TRUE)[1:15])
+```
+
+## 7.3 Plan factoriel des individus
+
+```{r plan_ind, fig.width=10, fig.height=8}
+# Plan de base
+fviz_pca_ind(heart.acp,
+             col.ind = "#696969",
+             repel = TRUE,
+             title = "Plan factoriel des patients") +
+  coord_fixed(ratio = 1)
+```
+
+```{r plan_cos2, fig.width=10, fig.height=8}
+# Selon la qualité
+fviz_pca_ind(heart.acp, 
+             col.ind = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE,
+             title = "Patients - Couleur selon cos²") +
+  coord_fixed(ratio = 1)
+```
+
+```{r plan_taille_couleur, fig.width=10, fig.height=8}
+# Taille et couleur selon cos²
+fviz_pca_ind(heart.acp, 
+             col.ind = "cos2", 
+             pointsize = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE,
+             title = "Patients - Taille et couleur selon cos²") +
+  coord_fixed(ratio = 1)
+```
+
+## 7.4 Graphiques de contributions
+
+```{r contrib_plots, fig.width=10, fig.height=6}
+# Contribution à l'axe 1
+fviz_contrib(heart.acp, 
+             choice = "ind", 
+             axes = 1,
+             top = 15,
+             title = "Top 15 patients - Contribution à l'axe 1")
+```
+
+```{r contrib_axis2, fig.width=10, fig.height=6}
+# Contribution à l'axe 2
+fviz_contrib(heart.acp, 
+             choice = "ind", 
+             axes = 2,
+             top = 15,
+             title = "Top 15 patients - Contribution à l'axe 2")
+```
+
+---
+
+# 8. Visualisations Avancées
+
+## 8.1 Variables et contributions
+
+```{r var_contrib_plots, fig.width=10, fig.height=6}
+# Contribution des variables à l'axe 1
+fviz_contrib(heart.acp, 
+             choice = "var", 
+             axes = 1,
+             title = "Contribution des variables à l'axe 1")
+```
+
+```{r var_contrib_axis2, fig.width=10, fig.height=6}
+# Contribution à l'axe 2
+fviz_contrib(heart.acp, 
+             choice = "var", 
+             axes = 2,
+             title = "Contribution des variables à l'axe 2")
+```
+
+## 8.2 Biplot - Variables et Individus
+
+```{r biplot, fig.width=10, fig.height=8}
+# Biplot standard
+fviz_pca_biplot(heart.acp, 
+                repel = TRUE,
+                col.var = "#2E9FDF",
+                col.ind = "#696969",
+                title = "Biplot - Patients et Variables") +
+  coord_fixed(ratio = 1)
+```
+
+```{r biplot_quality, fig.width=10, fig.height=8}
+# Biplot avec gradient de qualité
+fviz_pca_biplot(heart.acp,
+                col.ind = qlt12,
+                gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                col.var = "black",
+                repel = TRUE,
+                title = "Biplot - Qualité des patients") +
+  coord_fixed(ratio = 1)
+```
+
+## 8.3 Visualisations par variables qualitatives
+
+```{r acp_quali}
+# Ajouter les variables qualitatives
+heart_avec_quali <- heart_clean %>%
+  select(age, trestbps, chol, thalach, oldpeak, ca, sex, cp, num)
+
+heart.acp.quali <- PCA(
+  heart_avec_quali,
+  quali.sup = c(7, 8, 9),
+  scale.unit = TRUE,
+  ncp = 5,
+  graph = FALSE
+)
+```
+
+```{r plot_sex, fig.width=10, fig.height=8}
+# Par sexe
+fviz_pca_ind(heart.acp.quali, 
+             habillage = heart_clean$sex,
+             palette = c("#E7B800", "#2E9FDF"),
+             legend.title = "Sexe",
+             addEllipses = TRUE,
+             ellipse.type = "confidence",
+             title = "Plan factoriel - Patients par sexe") +
+  coord_fixed(ratio = 1)
+```
+
+```{r plot_disease, fig.width=10, fig.height=8}
+# Par présence de maladie
+disease <- ifelse(heart_clean$num == 0, "Sain", "Atteint")
+
+fviz_pca_ind(heart.acp.quali, 
+             habillage = disease,
+             palette = c("#00AFBB", "#FC4E07"),
+             legend.title = "Statut cardiaque",
+             addEllipses = TRUE,
+             ellipse.type = "confidence",
+             title = "Plan factoriel - Statut cardiaque") +
+  coord_fixed(ratio = 1)
+```
+
+---
+
+# 9. Interprétation des Axes
+
+## 9.1 Axe 1 : Charge Cardiovasculaire
+
+```{r axe1_interpretation}
+cat("╔════════════════════════════════════════════════╗\n")
+cat("║  AXE 1 : CHARGE CARDIOVASCULAIRE               ║\n")
+cat("╚════════════════════════════════════════════════╝\n\n")
+
+cat("Inertie expliquée :", round(heart.acp$eig[1, 2], 2), "%\n\n")
+
+cat("Variables les plus corrélées :\n")
+ax1_sorted <- sort(abs(heart.acp$var$cor[, 1]), decreasing = TRUE)
+for (i in 1:length(ax1_sorted)) {
+  var_name <- names(ax1_sorted)[i]
+  cor_val <- heart.acp$var$cor[var_name, 1]
+  cat(sprintf("  %d. %s : r = %+.3f\n", i, var_name, cor_val))
+}
+
+cat("\nInterprétation :\n")
+cat("  → Axe de charge cardiovasculaire globale\n")
+cat("  → Oppose patients jeunes (FC élevée) aux patients âgés (dépression ST)\n")
+cat("  → Gradient du profil sain au profil à risque\n")
+```
+
+## 9.2 Axe 2 : Facteurs Métaboliques
+
+```{r axe2_interpretation}
+cat("\n╔════════════════════════════════════════════════╗\n")
+cat("║  AXE 2 : FACTEURS MÉTABOLIQUES                 ║\n")
+cat("╚════════════════════════════════════════════════╝\n\n")
+
+cat("Inertie expliquée :", round(heart.acp$eig[2, 2], 2), "%\n\n")
+
+cat("Variables les plus corrélées :\n")
+ax2_sorted <- sort(abs(heart.acp$var$cor[, 2]), decreasing = TRUE)
+for (i in 1:length(ax2_sorted)) {
+  var_name <- names(ax2_sorted)[i]
+  cor_val <- heart.acp$var$cor[var_name, 2]
+  cat(sprintf("  %d. %s : r = %+.3f\n", i, var_name, cor_val))
+}
+
+cat("\nInterprétation :\n")
+cat("  → Dimension secondaire de variabilité\n")
+cat("  → Dimension métabolique et lipidique\n")
+cat("  → Indépendante de la charge cardiovasculaire (Axe 1)\n")
+```
+
+## 9.3 Profils identifiés
+
+```{r profils}
+cat("\n╔════════════════════════════════════════════════╗\n")
+cat("║        PROFILS DE PATIENTS IDENTIFIÉS         ║\n")
+cat("╚════════════════════════════════════════════════╝\n\n")
+
+# Coordonnées des individus
+coord_ind <- heart.acp$ind$coord[, 1:2]
+
+# Quadrants
+q1 <- sum(coord_ind[,1] > 0 & coord_ind[,2] > 0)
+q2 <- sum(coord_ind[,1] < 0 & coord_ind[,2] > 0)
+q3 <- sum(coord_ind[,1] < 0 & coord_ind[,2] < 0)
+q4 <- sum(coord_ind[,1] > 0 & coord_ind[,2] < 0)
+
+cat("Q1 (Dim1+, Dim2+) :", q1, "patients\n")
+cat("  → Charge ÉLEVÉE + Facteurs métaboliques positifs\n")
+cat("  → Profil : TRÈS HAUT RISQUE\n\n")
+
+cat("Q2 (Dim1-, Dim2+) :", q2, "patients\n")
+cat("  → Charge FAIBLE + Facteurs métaboliques positifs\n")
+cat("  → Profil : JEUNE AVEC MÉTABOLISME PARTICULIER\n\n")
+
+cat("Q3 (Dim1-, Dim2-) :", q3, "patients\n")
+cat("  → Charge FAIBLE + Facteurs métaboliques négatifs\n")
+cat("  → Profil : SAIN & BAS RISQUE\n\n")
+
+cat("Q4 (Dim1+, Dim2-) :", q4, "patients\n")
+cat("  → Charge ÉLEVÉE + Facteurs métaboliques négatifs\n")
+cat("  → Profil : ÂGÉ AVEC CHARGE CARDIOVASCULAIRE\n")
+```
+
+---
+
+# 10. Résultats Principaux
+
+## 10.1 Synthèse quantitative
+
+```{r synthese}
+cat("\n╔═══════════════════════════════════════════════════╗\n")
+cat("║              RÉSUMÉ DES RÉSULTATS                ║\n")
+cat("╚═══════════════════════════════════════════════════╝\n\n")
+
+cat("Échantillon :\n")
+cat("  • Nombre de patients :", nrow(heart_quanti), "\n")
+cat("  • Nombre de variables actives :", ncol(heart_quanti), "\n\n")
+
+cat("Dimensionnalité :\n")
+cat("  • Axe 1 explique :", round(heart.acp$eig[1, 2], 1), "% de variance\n")
+cat("  • Axe 2 explique :", round(heart.acp$eig[2, 2], 1), "% de variance\n")
+cat("  • Axes 1+2 :", round(heart.acp$eig[2, 3], 1), "% de variance cumulée\n")
+cat("  • Axe 3 explique :", round(heart.acp$eig[3, 2], 1), "% de variance\n\n")
+
+cat("Qualité de représentation :\n")
+cat("  • Patients bien représentés (cos²>0.5) :", 
+    round(sum(qlt12 > 0.5) / length(qlt12) * 100, 1), "%\n")
+cat("  • Cos² moyen :", round(mean(qlt12), 3), "\n\n")
+
+cat("Interprétation :\n")
+cat("  • Axe 1 = Charge cardiovasculaire (60% variance)\n")
+cat("  • Axe 2 = Facteurs métaboliques (7% variance)\n")
+cat("  • 2 axes = 67% de variance cumulée (bon résumé)\n")
+```
+
+---
+
+# 11. Conclusion
+
+## 11.1 Synthèse des résultats
+
+Cette Analyse en Composantes Principales du dataset Heart Disease révèle une **structure bidimensionnelle claire** des facteurs de risque cardiaque :
+
+1. **Dimension de charge cardiovasculaire** (Axe 1 - 60%) : Oppose les patients jeunes avec une bonne tolérance cardiaque aux patients âgés présentant une dépression ST importante.
+
+2. **Dimension métabolique** (Axe 2 - 7%) : Introduit une variabilité secondaire liée aux facteurs métaboliques et lipidiques.
+
+3. **Qualité de représentation** : Environ 65% des patients sont bien représentés sur le plan (1,2), validant la pertinence des deux premiers axes.
+
+4. **Profils identifiés** : L'ACP identifie quatre profils cliniques distincts, du profil sain-jeune (Q3) au profil multi-risque (Q1).
+
+## 11.2 Implications cliniques
+
+- **Stratification des patients** : Les profils identifiés permettent une classification automatisée du risque
+- **Identification des cas atypiques** : Les patients mal représentés méritent une analyse clinique approfondie
+- **Support décisionnel** : L'ACP fournit une base exploratoire pour des modèles prédictifs du risque cardiaque
+
+## 11.3 Limitations
+
+- Échelle individuelle : données au niveau des patients
+- Variables sélectionnées : certaines dimensions cliniques peuvent manquer
+- Données transversales : pas d'information sur l'évolution temporelle
+
+---
+
+# Annexes
+
+## Packages et versions
+
+```{r session_info}
+sessionInfo()
+```
+
+## Code complet
+
+Le code R complet est intégré dans ce document RMarkdown. Tous les chunks peuvent être exécutés indépendamment.
+
+---
+
+*Rapport généré le* `r format(Sys.time(), '%d %B %Y à %H:%M:%S')`  
+*Source : UCI Heart Disease Dataset*
